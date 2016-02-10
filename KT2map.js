@@ -16,74 +16,26 @@ map.addLayer(CartoDBTiles);
 var neighborhoodsGeoJSON;
 var sewerInfrastructureGeoJSON;
 
-
-// adding neighborhood layer
-$.getJSON( "geojson/NYC_neighborhood_data.geojson", function( data ) {
-    // ensure jQuery has pulled all data out of the geojson file
-    var neighborhoods = data;
-
-    // neighborhood choropleth map
-    // let's use % in poverty to color the neighborhood map
-    var povertyStyle = function (feature){
-        var value = feature.properties.PovertyPer;
-        var fillColor = null;
-        if(value >= 0 && value <=0.1){
-            fillColor = "#fee5d9";
-        }
-        if(value >0.1 && value <=0.15){
-            fillColor = "#fcbba1";
-        }
-        if(value >0.15 && value<=0.2){
-            fillColor = "#fc9272";
-        }
-        if(value > 0.2 && value <=0.3){
-            fillColor = "#fb6a4a";
-        }
-        if(value > 0.3 && value <=0.4) { 
-            fillColor = "#de2d26";
-        }
-        if(value > 0.4) { 
-            fillColor = "#a50f15";
-        }
-
-        var style = {
-            weight: 1,
-            opacity: .1,
-            color: 'white',
-            fillOpacity: 0.75,
-            fillColor: fillColor
-        };
-
-        return style;
-    }
-
-    var povertyClick = function (feature, layer) {
-        var percent = feature.properties.PovertyPer * 100;
-        percent = percent.toFixed(0);
-        // let's bind some feature properties to a pop up
-        layer.bindPopup("<strong>Neighborhood:</strong> " + feature.properties.NYC_NEIG + "<br /><strong>Percent in Poverty: </strong>" + percent + "%");
-    }
-
-    neighborhoodsGeoJSON = L.geoJson(neighborhoods, {
-        style: povertyStyle,
-        onEachFeature: povertyClick
-    }).addTo(map);
-
 // adding CSO layer
 $.getJSON( "geojson/sewer_infrastructure.geojson", function( data ) {
 
     // ensure jQuery has pulled all data out of the geojson file
     var sewerInfrastructure = data;
 
-
-    // style for CSO points
      var CSOPointToLayer = function (feature, latlng){
+        if(feature.properties.feature == 'OUTFALL') {
+            var fillColor = '#ff0000'
+            var fillOpacity = 1;
+        } else {
+            var fillColor = '#ffffff'
+            var fillOpacity = 0;
+        }
+
         var CSOpoint = L.circle(latlng, 100, {
-        if(feature equals 'OUTFALL'){
-            stroke: false,
-            fillColor: '#2ca25f',
-            fillOpacity: 1
-        });
+                stroke: false,
+                fillColor: fillColor,
+                fillOpacity: fillOpacity
+            });
 
         return CSOpoint;  
     }
@@ -95,13 +47,95 @@ $.getJSON( "geojson/sewer_infrastructure.geojson", function( data ) {
     }
 
     // using L.geojson add subway lines to map
-    sewerInfrastructureGeoJSON = L.geoJson(sewerInfrastructure, 100, {
+    sewerInfrastructureGeoJSON = L.geoJson(sewerInfrastructure, {
         pointToLayer: CSOPointToLayer,
         onEachFeature: CSOClick
-    }).addTo(map);
+    });
+
 
 });
 
+// adding neighborhood layer
+$.getJSON( "geojson/NYC_neighborhood_data.geojson", function( data ) {
+    // ensure jQuery has pulled all data out of the geojson file
+    var neighborhoods = data;
+/*
+//this didn't work
+var populationStyle = function (feature){
+    var value = feature.properties.pop; //eventually want to make this population density
+    var fillColor = null;
+    if(value >= 0 && value <=5000){
+        fillColor = "#fee5d9";
+    }
+    if(value >5000 && value <=10000){
+        fillColor = "#fcbba1";
+    }
+    if(value >10000 && value<=50000){
+        fillColor = "#fc9272";
+    }
+    if(value > 50000 && value <=1000000){
+        fillColor = "#fb6a4a";
+    }
+    if(value > 100000 && value <=150000) { 
+        fillColor = "#de2d26";
+    }
+    if(value > 150000) { 
+        fillColor = "#a50f15";
+    }
+
+    var style = {
+        weight: 1,
+        opacity: .1,
+        color: 'white',
+        fillOpacity: 0.75,
+        fillColor: fillColor
+    };
+
+    return style;
+}
+
+*/
+
+function getColor(d) { //used a leaflet example for this, but its not returning the style I want!
+    return  d > 150000 ? '#0868ac' :
+            d > 100000 ? '#43a2ca' :
+            d > 50000 ? '#7bccc4' :
+            d > 10000 ? '#a8ddb5' :
+            d > 5000 ? '#ccebc5' :
+                        '#f0f9e8';
+}
+function style(feature) {
+    return{
+        fillColor: getColor(feature.properties.pop),
+        weight: 2,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: 0.7
+    };
+}
+L.geoJson(neighborhoods, {style: style}).addTo(map);
+
+/*
+    // plain neighborhood map
+    var featureStyle = {
+        "color": '#000080',
+        "weight": 2,
+        "opacity": 1
+    };
+*/
+    var neighborhoodClick = function (feature, layer) {
+
+        // let's bind some feature properties to a pop up
+        layer.bindPopup("<strong>Neighborhood:</strong> " + feature.properties.NYC_NEIG);
+    }
+
+    neighborhoodsGeoJSON = L.geoJson(neighborhoods, {
+        onEachFeature: neighborhoodClick
+    }).addTo(map);
+
+    // add sewer layer
+    sewerInfrastructureGeoJSON.addTo(map);
 
     // create layer controls
     createLayerControls(); 
